@@ -1077,7 +1077,11 @@ def ensure_structure(base_dir: Path) -> dict[str, Path]:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Wrapper-Report für Optionen, Aktien, Cash/FX und Zinsen aus LYNX/IBKR Transaction-History CSV.")
     ap.add_argument("--csv", required=True, help="CSV Pfad oder Glob, z.B. data/U24066232.TRANSACTIONS.YTD.csv")
-    ap.add_argument("--starting-capital", default="0", help="Opening Capital in Statement-Basiswährung vor dem ersten CSV-Datum, z.B. 50000")
+    ap.add_argument(
+        "--pre-csv-capital",
+        default="0",
+        help="Betrag in Statement-Basiswährung, der bereits VOR dem Anfangsdatum der CSV auf das Konto eingezahlt war, z.B. 50000",
+    )
     ap.add_argument("--interest-group-by", choices=["posting", "accrual"], default="posting")
     ap.add_argument("--output-dir", default="output", help="Output-Ordner für PDF und Charts")
     args = ap.parse_args()
@@ -1096,15 +1100,15 @@ def main() -> int:
     df = prepare_df(raw_df)
     base_currency = statement.base_currency or "EUR"
 
-    starting_capital = parse_decimal(args.starting_capital)
-    if starting_capital is None:
-        raise SystemExit("--starting-capital ist nicht parsebar.")
+    pre_csv_capital = parse_decimal(args.pre_csv_capital)
+    if pre_csv_capital is None:
+        raise SystemExit("--pre-csv-capital ist nicht parsebar.")
 
-    cap_monthly = build_monthly_contributed_capital(df, starting_capital)
+    cap_monthly = build_monthly_contributed_capital(df, pre_csv_capital)
     capital_note = (
-        "Startwert vor erstem CSV-Datum wird via --starting-capital ergänzt."
-        if starting_capital != 0
-        else "Ohne Opening Capital ist die Kapitalbasis nur dann exakt, wenn der Export ab Kontostart beginnt."
+        "Bereits vor dem ersten CSV-Datum eingezahltes Kapital wird via --pre-csv-capital ergänzt."
+        if pre_csv_capital != 0
+        else "Ohne Angabe von --pre-csv-capital ist die Kapitalbasis nur dann exakt, wenn der Export ab Kontostart beginnt."
     )
 
     options_rows, options_monthly = summarize_options(df, base_currency, cap_monthly)
